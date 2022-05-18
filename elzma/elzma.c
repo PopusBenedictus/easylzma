@@ -221,18 +221,17 @@ doCompress(int argc, char ** argv)
     }
     
     /* set uncompressed size */
-    /*
     if (0 != fseek(inFile, 0, SEEK_END) ||
         0 == (uncompressedSize = ftell(inFile)) ||
         0 != fseek(inFile, 0, SEEK_SET))
     {
+        /*
         fprintf(stderr, "error seeking input file (%s) - zero length?\n",
                 ifname);
         deleteFile(ofname);
         return 1;
+        */
     }
-    */
-    uncompressedSize = ftell(inFile);
 
     /* determine a reasonable dictionary size given input size */
     if (dictSize == 0) dictSize = elzma_get_dict_size(uncompressedSize);
