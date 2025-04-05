@@ -1,27 +1,23 @@
-# Written in 2009 by Lloyd Hilaiel
-#
-# License
-# 
-# All the cruft you find here is public domain.  You don't have to credit
-# anyone to use this code, but my personal request is that you mention
-# Igor Pavlov for his hard, high quality work.
-#
+cmake_minimum_required(VERSION 3.16)
 
-SET (SRCS easylzma_test.c simple.c)
-SET (HDRS simple.h)
+set(SRCS easylzma_test.c simple.c)
+set(HDRS simple.h)
 
-INCLUDE_DIRECTORIES(
-    ${CMAKE_CURRENT_BINARY_DIR}/../${EASYLZMA_DIST_NAME}/include
+include_directories(
+        "${CMAKE_CURRENT_BINARY_DIR}/../${EASYLZMA_DIST_NAME}/include"
 )
-LINK_DIRECTORIES(
-    ${CMAKE_CURRENT_BINARY_DIR}/../${EASYLZMA_DIST_NAME}/lib
+link_directories(
+        "${CMAKE_CURRENT_BINARY_DIR}/../${EASYLZMA_DIST_NAME}/lib"
 )
 
-ADD_EXECUTABLE(easylzma_test ${SRCS} ${HDRS})
+add_executable(easylzma_test ${SRCS} ${HDRS})
+target_link_libraries(easylzma_test PRIVATE easylzma_s)
 
-TARGET_LINK_LIBRARIES(easylzma_test easylzma_s)
+# Ensure the headers have been copied before we build or run the test
+add_dependencies(easylzma_test copy_public_headers)
 
-GET_TARGET_PROPERTY(binPath easylzma_test LOCATION)
-
-# a test target
-ADD_CUSTOM_TARGET(test ${binPath})
+add_custom_target(test
+        COMMAND $<TARGET_FILE:easylzma_test>
+        DEPENDS easylzma_test
+        COMMENT "Running easylzma_test"
+)

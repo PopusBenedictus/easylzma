@@ -1,59 +1,59 @@
-# Written in 2009 by Lloyd Hilaiel
-#
-# License
-# 
-# All the cruft you find here is public domain.  You don't have to credit
-# anyone to use this code, but my personal request is that you mention
-# Igor Pavlov for his hard, high quality work.
-#
+cmake_minimum_required(VERSION 3.16)
 
-IF (WIN32)
-  ADD_DEFINITIONS(-DWIN32)
-ENDIF (WIN32)
+if(WIN32)
+  add_definitions(-DWIN32)
+endif()
 
-FILE(GLOB SRCS pavlov/*.c *.c)
-FILE(GLOB HDRS *.h pavlov/*.h easylzma/*.h)
-FILE(GLOB PUB_HDRS easylzma/*.h)
+file(GLOB SRCS pavlov/*.c *.c)
+file(GLOB HDRS *.h pavlov/*.h easylzma/*.h)
+file(GLOB PUB_HDRS easylzma/*.h)
 
-# set up some paths for outputing the usable binaries
-SET (libDir
-     ${CMAKE_CURRENT_BINARY_DIR}/../${EASYLZMA_DIST_NAME}/lib)
-SET (incDir
-     ${CMAKE_CURRENT_BINARY_DIR}/../${EASYLZMA_DIST_NAME}/include/easylzma)
+# Set up output paths
+set(libDir
+        "${CMAKE_CURRENT_BINARY_DIR}/../${EASYLZMA_DIST_NAME}/lib")
+set(incDir
+        "${CMAKE_CURRENT_BINARY_DIR}/../${EASYLZMA_DIST_NAME}/include/easylzma")
 
-# an include directory to allow easylzma implementation to find public
-# headers
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
-# get the built libs into the correct place
-SET(LIBRARY_OUTPUT_PATH ${libDir})
+# Place built libs in the correct place
+set(LIBRARY_OUTPUT_PATH "${libDir}")
 
-ADD_LIBRARY(easylzma_s STATIC ${SRCS} ${HDRS})
-ADD_LIBRARY(easylzma   SHARED ${SRCS} ${HDRS})
+add_library(easylzma_s STATIC ${SRCS} ${HDRS})
+add_library(easylzma SHARED ${SRCS} ${HDRS})
 
-# setup shared library version numbering
-SET_TARGET_PROPERTIES(
-    easylzma PROPERTIES
-    SOVERSION ${EASYLZMA_MAJOR}
-    VERSION ${EASYLZMA_MAJOR}.${EASYLZMA_MINOR}.${EASYLZMA_MICRO})
+# Setup shared library version numbering
+set_target_properties(easylzma
+        PROPERTIES
+        SOVERSION "${EASYLZMA_MAJOR}"
+        VERSION "${EASYLZMA_MAJOR}.${EASYLZMA_MINOR}.${EASYLZMA_MICRO}"
+)
 
-# on win32 we'll need to setup exports correctly
-SET(sharedLibCompileFlags "-DEASYLZMA_SHARED -DEASYLZMA_BUILD")
-IF (APPLE)
-  SET(sharedLibCompileFlags "${sharedLibCompileFlags} -fno-common")
-ENDIF (APPLE)
+# On Win32 we'll need to set up exports correctly
+set(sharedLibCompileFlags "-DEASYLZMA_SHARED -DEASYLZMA_BUILD")
+if(APPLE)
+  set(sharedLibCompileFlags "${sharedLibCompileFlags} -fno-common")
+endif()
 
-SET_TARGET_PROPERTIES(easylzma PROPERTIES
-                      COMPILE_FLAGS ${sharedLibCompileFlags})
+set_target_properties(easylzma
+        PROPERTIES
+        COMPILE_FLAGS "${sharedLibCompileFlags}"
+)
 
-# create these output directories
-FILE(MAKE_DIRECTORY ${libDir})
-FILE(MAKE_DIRECTORY ${incDir})
+file(MAKE_DIRECTORY "${libDir}")
+file(MAKE_DIRECTORY "${incDir}")
 
-### copy the two required headers into our output dir as a post build step
-# copy public headers to output directory
-FOREACH (header ${PUB_HDRS})
-  # preserve relative pathing		
-  ADD_CUSTOM_COMMAND(TARGET easylzma_s POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${header} ${incDir})
-ENDFOREACH (header ${PUB_HDRS})
+add_custom_target(copy_public_headers
+        COMMENT "Copying public headers into ${incDir}"
+)
+
+foreach(header ${PUB_HDRS})
+  add_custom_command(
+          TARGET copy_public_headers
+          POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          "${header}"
+          "${incDir}"
+          COMMENT "Copying ${header} to ${incDir}"
+  )
+endforeach()

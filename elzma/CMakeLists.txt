@@ -1,47 +1,66 @@
-# Written in 2009 by Lloyd Hilaiel
-#
-# License
-# 
-# All the cruft you find here is public domain.  You don't have to credit
-# anyone to use this code, but my personal request is that you mention
-# Igor Pavlov for his hard, high quality work.
-#
+cmake_minimum_required(VERSION 3.16)
 
-IF (WIN32)
-  ADD_DEFINITIONS(-DWIN32)
-ENDIF (WIN32)
+if(WIN32)
+  add_definitions(-DWIN32)
+endif()
 
-# set up some paths
-SET (binDir ${CMAKE_CURRENT_BINARY_DIR}/../${EASYLZMA_DIST_NAME}/bin)
+# The directory into which we'll copy/symlink the final exe
+set(binDir "${CMAKE_CURRENT_BINARY_DIR}/../${EASYLZMA_DIST_NAME}/bin")
+file(MAKE_DIRECTORY "${binDir}")
 
-# create some directories
-FILE(MAKE_DIRECTORY ${binDir})
-
-SET (SRCS elzma.c util.c)
-SET (HDRS util.h)
-
-# use the library we built
-INCLUDE_DIRECTORIES(
-    ${CMAKE_CURRENT_BINARY_DIR}/../${EASYLZMA_DIST_NAME}/include
+set(SRCS
+        elzma.c
+        util.c
 )
-LINK_DIRECTORIES(
-    ${CMAKE_CURRENT_BINARY_DIR}/../${EASYLZMA_DIST_NAME}/lib
+set(HDRS
+        util.h
 )
 
-ADD_EXECUTABLE(elzma ${SRCS})
+include_directories(
+        "${CMAKE_CURRENT_BINARY_DIR}/../${EASYLZMA_DIST_NAME}/include"
+)
+link_directories(
+        "${CMAKE_CURRENT_BINARY_DIR}/../${EASYLZMA_DIST_NAME}/lib"
+)
 
-TARGET_LINK_LIBRARIES(elzma easylzma_s)
+add_executable(elzma ${SRCS} ${HDRS})
+target_link_libraries(elzma PRIVATE easylzma_s)
+add_dependencies(elzma copy_public_headers)
 
-# make a hard link (or copy on win32) from unelzma to elzma
-GET_TARGET_PROPERTY(binPath elzma LOCATION)
-IF (WIN32)
-  SET(exeExt ".exe") 
-  SET(hardLinkCommand ${CMAKE_COMMAND} -E copy_if_different) 
-ELSE (WIN32)
-  SET(hardLinkCommand ln -f) 
-  SET(exeExt ) 
-ENDIF (WIN32)
-ADD_CUSTOM_COMMAND(TARGET elzma POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${binPath} ${binDir}
-      COMMAND ${hardLinkCommand} elzma${exeExt} unelzma${exeExt}
-      WORKING_DIRECTORY "${binDir}")    
+if(WIN32)
+  # Windows: copy both elzma and unelzma so they are identical executables
+  set(exeExt ".exe")
+  add_custom_command(
+          TARGET elzma
+          POST_BUILD
+          COMMAND
+          # Copy the built elzma.exe to binDir
+          ${CMAKE_COMMAND} -E copy_if_different
+          "$<TARGET_FILE:elzma>"
+          "${binDir}"
+          COMMAND
+          # Copy it again under the name unelzma.exe
+          ${CMAKE_COMMAND} -E copy_if_different
+          "elzma${exeExt}"
+          "unelzma${exeExt}"
+          WORKING_DIRECTORY "${binDir}"
+  )
+else()
+  # Non-Windows (Linux, macOS): symlink "unelzma" to "elzma"
+  set(exeExt "")
+  add_custom_command(
+          TARGET elzma
+          POST_BUILD
+          COMMAND
+          # Copy the built elzma to binDir
+          ${CMAKE_COMMAND} -E copy_if_different
+          "$<TARGET_FILE:elzma>"
+          "${binDir}"
+          COMMAND
+          # Symlink unelzma -> elzma
+          ${CMAKE_COMMAND} -E create_symlink
+          "elzma${exeExt}"
+          "unelzma${exeExt}"
+          WORKING_DIRECTORY "${binDir}"
+  )
+endif()
